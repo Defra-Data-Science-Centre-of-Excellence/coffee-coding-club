@@ -1,0 +1,464 @@
+---
+title: "Economic Data from the Gapminder Dataset for Spain"  
+author: "Michael Reda"
+date: "Last modified `r format(Sys.time(), '%d %B %Y')`"
+output: html_document
+---
+```{r global options, echo = FALSE}
+#set global options
+knitr::opts_chunk$set(
+  echo = FALSE, # this decides whether the R chunks should be shown in the published R markdown document or not, once it is knitted.
+  warning = FALSE,
+  message = FALSE)
+
+# this option (scientific notation penalty) allows us to stop R from printing figures like '1.2e05', which is known as scientific notation.
+options(scipen = 999)
+  
+```
+
+```{r load packages and define objects}
+
+#install necessary packages. If doing this for the first time, unhash these lines and copy them in to the console.
+#install.packages("tidyverse")
+#install.packages("knitr")
+#install.packages("gapminder")
+#install.packages("formattable")
+#install.packages("modelr")
+
+#load packages from library
+library(tidyverse)
+library(knitr)
+library(gapminder)
+library(formattable)
+library(modelr)
+
+# set the theme and the discrete, binned and continuous colour schemes and fill schemes
+theme <- theme_classic()
+fill_b <- scale_fill_viridis_b()
+fill_c <-  scale_fill_viridis_c()
+fill_d <-  scale_fill_viridis_d()
+colour_b <- scale_colour_viridis_b()
+colour_c <- scale_colour_viridis_c()
+colour_d <- scale_colour_viridis_d()
+
+# set the country name
+country_name <- "Spain"
+
+# do we care about joins?
+we_care_about_pivots_and_joins <- FALSE
+
+```
+
+
+## Introduction
+
+This paper presents economic data from the Gapminder dataset for all countries between 1952 and 2007, with a particular focus on `r country_name`. 
+
+It is written in R Markdown and creates an HTML file. R markdown also allows you to create PDF files, Word documents, slideshow presentations, dashboards, e-books and interactive documents with embedded apps.
+
+### Resources
+
+#### Gapminder
+*"Gapminder was founded by Ola Rosling, Anna Rosling Rönnlund and Hans Rosling in 2005. It is an independent educational non-profit specialized in global misconceptions. It aims to fight common misconceptions with a fact-based worldview that everyone can understand."* [The Gapminder website](https://www.gapminder.org/resources/) includes resources and information about the goals of the project.
+
+Hans Rosling argued that we can feel compassion and sadness for the suffering we see in the world while at the same time recognising and celebrating the overwhelmingly positive story of progress which has occurred slowly, quietly, over the long run. The two are not mutually exclusive.
+
+> “Remember: things can be bad, and getting better ..."
+
+>"Step-by-step, year-by-year, the world is improving. Not on every single measure every single year, but as a rule. Though the world faces huge challenges, we have made tremendous progress. This is the fact-based worldview.”
+*― Hans Rosling, Factfulness: Ten Reasons We're Wrong About the World—and Why Things Are Better Than You Think*
+
+
+#### R markdown and data visualisation
+
+- The most valuable (and easiest to understand) resource I have found is Hadley Wickham and Garrett Grolemund's [R for Data Science](https://r4ds.had.co.nz/). This is a free e-book which teaches the entire data science process using the Tidyverse in R. Many of the ideas and methods in this paper are based on this book.
+
+- The R Markdown website includes a clearly written [guide to R markdown](https://rmarkdown.rstudio.com/lesson-1.html).
+
+- Cédric Scherer, [A GGplot2 tutorial for beautiful plotting in R](https://cedricscherer.netlify.app/2019/08/05/a-ggplot2-tutorial-for-beautiful-plotting-in-r/). 
+
+
+### The Gapminder Dataset
+
+Jennifer Bryan has created a cleaned subset of the Gapminder data as an R package, which means we can access it directly from within R and immediately start analysing and visualising it. It is a panel of socio-economic indicators for three variables, for all countries, from 1952 to 2007, in five year intervals. The data is commonly used in tutorials and examples - including in Data Camp courses - so you might already be familiar with it.
+
+Let's have a look at the first ten rows of the gapminder dataset for `r country_name`:
+```{r see first few rows of the data}
+gapminder <- gapminder
+formattable(slice(filter(gapminder, country == country_name), 1:10))
+```
+
+
+### Pivots and Joins
+
+`r if(!we_care_about_pivots_and_joins){"We don't care about pivots or joins."}`
+
+`r if(we_care_about_pivots_and_joins){"Pivoting makes a dataframe tall and thin, or short and wide. Joining puts data from two seperate dataframes together. To demonstrate, let's make a dataframe from scratch. This has nothing to do with the Gapminder data. It gives a list of cellists and pianists; one of each per continent."}`
+```{r echo = we_care_about_pivots_and_joins, eval = we_care_about_pivots_and_joins}
+music <- tibble(continent = rep(c("Africa", "Americas", "Asia", "Europe", "Oceania"), times = 2),
+                musician_type = rep(c("cellist", "pianist"), each = 5),
+                musician_name = c("Abel Selaocoe", "Sol Gabetta", "Sifei Wen", "Ophelie Gaillard", "Yelian He", "William Chapman Nyaho", "Claudio Arrau", "Lang-Lang", "Vladimir Ashkenazy", "David Helfgott")
+                )
+
+formattable(music)
+```
+
+`r if(we_care_about_pivots_and_joins){"The data is in a 'tidy' format, which is generally a good thing when working with Tidyverse packages in R. However, in this case we want to join only the cellists to our gapminder dataset. One way to do this is by filtering, but another way is to **pivot** the data wider to present each musician type as a variable consisting of musician name observations. We can then join the desired column to gapminder by 'continent'."}`
+```{r echo = we_care_about_pivots_and_joins, eval = we_care_about_pivots_and_joins}
+music_wider <- music %>% pivot_wider(names_from = "musician_type", values_from = "musician_name")
+                
+formattable(music_wider)
+```
+
+`r if(we_care_about_pivots_and_joins){"The **join** functions allow us to combine columns of different dataframes (as opposed to rbind which stacks dataframes by adding rows). My favorite is left_join because this functions in the same way as Excel's INDEX MATCH or VLOOKUP. The dataframe specified on the left stays as it is, and the data on the right is rearranged, repeated or omitted as necessary to correspond to the left dataframe.  Here is a random selection of 10 rows of the new dataframe."}`
+```{r echo= we_care_about_pivots_and_joins, eval = we_care_about_pivots_and_joins}
+gapminder_music <- left_join(gapminder, select(music_wider, -pianist), by = "continent")
+
+formattable(slice_sample(gapminder_music, n=10))
+```
+
+```{r}
+# now that the join exercise is over, we can delete these three dataframes from the environment if we want to.
+rm(gapminder_music, music, music_wider)
+```
+
+
+## Economic Indicators
+
+Here are some examples of data visualisation using ggplot2.
+
+### Life expectancy and GDP per capita
+
+This graph - taught as part of a DataCamp course - presents a lot of information in an elegant way. Were life expectancy and GDP per capita correlated across countries in 1952?
+
+```{r life_exp_gdp_per_cap_1952, fig.width= 12, fig.height= 8}
+
+ggplot(filter(gapminder, year == 1952), aes(x = gdpPercap, y = lifeExp))+
+  geom_point(aes(colour = continent, size = pop))+
+  geom_smooth(method = lm, formula = y~x, aes(group = 1), se = FALSE)+
+  scale_x_log10()+
+  labs(title = "Life expectancy and GDP per capita, 1952",
+       subtitle = "subtitle text",
+       caption = "source: Gapminder",
+       x = "GDP per capita, log scale",
+       y = "life expectancy")+
+  theme+
+  colour_d
+```
+
+What about in 2007?
+
+```{r life_exp_gdp_per_cap_2007, fig.width= 12, fig.height= 8}
+
+ggplot(filter(gapminder, year == 2007), aes(x = gdpPercap, y = lifeExp))+
+  geom_point(aes(colour = continent, size = pop))+
+  geom_smooth(method = lm, formula = y~x, aes(group = 1), se = FALSE)+
+  scale_x_log10()+
+  labs(title = "Life expectancy and GDP per capita, 2007",
+       subtitle = "subtitle text",
+       caption = "source: Gapminder",
+       x = "GDP per capita, log scale",
+       y = "life expectancy")+
+  theme+
+  colour_d
+```
+
+
+### GDP per capita for `r country_name` over time
+
+How does `r country_name` compare to other countries in terms of GDP per capita over time?
+
+```{r gdp_per_capita_over_time, fig.width= 12, fig.height= 8}
+
+country_name_subset <- filter(gapminder, country == country_name)
+
+ggplot(data = gapminder, aes(x = year, y = gdpPercap))+
+  geom_point(aes(alpha = 0.25))+
+  geom_point(data = country_name_subset, colour = "red", size = 2)+
+  geom_text(data = filter(country_name_subset, year == 1952), label = country_name, hjust = -0.1, vjust = -0.1)+
+   scale_y_log10()+
+  xlim(1952, 2007)+
+  labs(title = "GDP per capita over time",
+       subtitle = "all countries",
+       caption = "source: Gapminder",
+       x = "Year",
+       y = "GDP per capita, log scale")+
+  theme
+
+```
+
+
+This could be improved with a box and whisker plot or a violin plot, but if we're less interested in distributions, a simpler way to look at this is by averaging all other countries and creating a line graph. We can also compare against the UK.
+
+```{r}
+# create world averages
+world_averages <- gapminder %>%
+  group_by(year)%>%
+  summarise(country = "World", continent = "World", lifeExp = mean(lifeExp), pop = sum(pop), gdpPercap = mean(gdpPercap))
+
+gapminder <- rbind(gapminder, world_averages)
+```
+
+
+This graph shows GDP per capita for `r country_name` from 1952 to 2007, compared with the UK and the world average. Note the trend over time, which is [write description here... you can't automate everything!] when compared to the UK and the world average.
+
+```{r}
+ggplot(data = filter(gapminder, country %in% c(country_name, "World", "United Kingdom")))+
+  geom_line(mapping = aes(x = year, y = gdpPercap, colour = country))+
+  labs(title = "GDP per capita over time",
+       subtitle = "1952 - 2007",
+       caption = "source: Gapminder",
+       x = "Year",
+       y = "GDP per capita")+
+  theme+
+  colour_d
+```
+
+### Global average GDP per capita, weighted by country population
+
+Using country-level data to calculate the global average GDP per capita as shown above will give us an inaccurate estimate, because some countries have much higher populations than others. If we want to get an idea of the wealth of the average person, we should use a weighted average. 
+
+```{r}
+world_estimates_weighted_df <- gapminder %>%
+  group_by(year)%>%
+  summarise(wght_avg_gdpPercap = weighted.mean(gdpPercap, w = pop),
+            avg_gdpPercap = mean(gdpPercap))%>%
+  pivot_longer(cols = 2:3, names_to = "variable", values_to = "value")
+  
+```
+
+R makes it easy to calculate weighted averages. The syntax looks like: **new_value = weighted.mean(values, w = weights)**.
+
+How does this population-weighted average compare to the flat average presented in the graph above?
+
+```{r}
+ggplot()+
+  geom_line(data = world_estimates_weighted_df, mapping = aes(x = year, y = value, colour = variable))+
+  labs(title = "GDP per capita over time",
+       subtitle = "a comparison of population-weighted and unweighted averages, 1952 - 2007",
+       caption = "source: Gapminder",
+       x = "Year",
+       y = "World average GDP per capita")+
+  theme+
+  colour_d
+```
+
+The global population-weighted average GDP per capita in 1952 was `r world_estimates_weighted_df %>% filter(year == 1952, world_estimates_weighted_df$variable == "wght_avg_gdpPercap") %>%  pull(value) %>% round(digits = 0)`. This rose to `r world_estimates_weighted_df %>% filter(year == 2007 & world_estimates_weighted_df$variable == "wght_avg_gdpPercap") %>%  pull(value) %>% round(digits = 0)` in 2007. This compares to an unweighted average GDP per capita of `r world_estimates_weighted_df %>% filter(year == 1952, world_estimates_weighted_df$variable == "avg_gdpPercap") %>%  pull(value) %>% round(digits = 0)` in 1952 which rose to `r world_estimates_weighted_df %>% filter(year == 2007 & world_estimates_weighted_df$variable == "avg_gdpPercap") %>%  pull(value) %>% round(digits = 0)` in 2007.
+
+## Population
+
+Similarly, we can compare the trend for `r country_name` with the UK. But we need to remove the world total here, because it is so high that the other two lines appear flattened at the bottom of the graph, making them impossible to interpret.
+
+```{r}
+ggplot(data = filter(gapminder, country %in% c(country_name, "United Kingdom")))+
+  geom_line(mapping = aes(x = year, y = pop, colour = country))+
+  labs(title = "Population over time",
+       subtitle = "1952 - 2007",
+       caption = "source: Gapminder",
+       x = "Year",
+       y = "Population")+
+  theme+
+  colour_d
+```
+
+
+### Population across continents: a comparison over time
+
+These graphs show the total population in millions, per continent, in 1952 and in 2007. Unlike the graph above, this graph presents the results in millions, allowing a neater y axis.
+
+```{r}
+# group by continent and year, drop World
+grouped_continent_year <- gapminder %>%
+  group_by(continent, year)%>%
+  summarise(lifeExp = mean(lifeExp), pop = sum(pop), gdpPercap = mean(gdpPercap))
+
+ggplot(data = filter(grouped_continent_year, year %in% c(1952, 2007), continent != "World"), aes(x = continent, y = pop / 1000000, fill = continent))+
+  geom_bar(stat = "identity")+
+  facet_wrap(~year)+
+    labs(title = "Population per continent, millions",
+       subtitle = "1952 and 2007",
+       caption = "source: Gapminder",
+       y = "population, m")+
+  theme+
+  fill_d
+```
+
+### Population over time: a comparison across continents
+
+We could also facet the data by continent to compare between between years for each continent:
+
+```{r}
+# group by continent and year, drop World
+ggplot(data = filter(grouped_continent_year, year %in% c(1952, 2007), continent != "World"), aes(x = as.factor(year), y = pop / 1000000, fill = as.factor(year)))+
+  geom_bar(stat = "identity")+
+  facet_wrap(~continent)+
+    labs(title = "Population over time, millions",
+       subtitle = "shown per continent",
+       caption = "source: Gapminder",
+       x = "year",
+       y = "population, m",
+       fill = "year")+
+  theme+
+  fill_d
+```
+
+But a better option here would be to use a line graph.
+```{r}
+ggplot(data = filter(grouped_continent_year, continent != "World"), aes(x = year, y = pop / 1000000, colour = continent))+
+  geom_line()+
+    labs(title = "Population over time, millions",
+       subtitle = "shown per continent",
+       caption = "source: Gapminder",
+       y = "population, m")+
+  theme+
+  colour_d
+```
+
+
+## Growth rates
+
+Here is a function that calculates growth rates between observations. This won't be the annual growth rate unless our observations are annual. In the case of the gapminder data, the observations are every five years.
+```{r echo = TRUE}
+# create a growth rate function
+growth_over_period <- function(x){(x - dplyr::lag(x))/dplyr::lag(x)}
+```
+
+
+Now we can apply our function to the data and even combine it with other operations. This table shows that we've created two new columns: growth rates over the period for GDP per capita and population.
+
+```{r}
+gapminder <- gapminder %>%
+  group_by(country) %>%
+  mutate(gdpPercap_5y_growth_rate = growth_over_period(x = gdpPercap), 
+         pop_5y_growth_rate = growth_over_period(x = pop))%>%
+  ungroup()
+
+formattable(slice(gapminder, 1:6))
+```
+
+
+But growth rates calculated over five year periods are less useful than annual growth rates. So we might decide that we want to replace these columns with annual growth rates. First we'll create a new function:
+```{r echo = TRUE}
+# create an annual growth rate function which allows us to specify the number of years between observations, and calculate the annual rate.
+growth_annual <- function(x, years){(((x / dplyr::lag(x))^(1/years))-1)}
+```
+
+
+And then apply it to the gapminder dataset, also dropping the previous columns.
+```{r}
+gapminder <- gapminder %>%
+  group_by(country) %>%
+  mutate(gdpPercap_annual_growth_rate = growth_annual(x = gdpPercap, years = 5), 
+         pop_annual_growth_rate = growth_annual(x = pop, years = 5))%>%
+  select(-c(gdpPercap_5y_growth_rate, pop_5y_growth_rate))%>%
+  ungroup()
+
+formattable(slice(gapminder, 1:6))
+```
+
+
+What do these growth rates look like for `r country_name`, the UK and the world?
+```{r}
+ggplot(data = filter(gapminder, country %in% c(country_name, "World", "United Kingdom")), 
+       mapping = aes(x = year, y = gdpPercap_annual_growth_rate * 100,  colour = country))+
+  geom_line()+
+  labs(title = "Annual growth rate of GDP per capita, %",
+       caption = "source: Gapminder",
+       y = "annual % growth rate")+
+  colour_d+
+  theme
+```
+
+
+```{r}
+ggplot(data = filter(gapminder, country %in% c(country_name, "World", "United Kingdom")), 
+       mapping = aes(x = year, y = pop_annual_growth_rate * 100,  colour = country))+
+  geom_line()+
+  labs(title = "Annual growth rate of population over time, %",
+       caption = "source: Gapminder",
+       y = "annual % growth rate")+
+  colour_d+
+  theme
+```
+
+## Modelling
+
+### A simple linear model
+
+
+Here is a cross-sectional OLS model which predicts life expectancy as a function of the natural log of GDP per capita and continent for the year 2007. The model is:
+
+> lifeExp ~ log(gdpPercap) + continent
+
+
+### Results
+
+```{r}
+# filter the data for 2007
+gapminder_2007 <- gapminder %>% 
+  select(country, continent, year, lifeExp, gdpPercap) %>% 
+  filter (year == 2007, continent != "World")%>%
+  droplevels # I was receiving an error later on because continent is defined as a factor, and even though all 'World' observations had disappeared, 'World' was still an empty factor level. Droplevels removes empty levels.
+
+# an OLS regression of life expectancy on GDP per capita and continent
+linear_model_lifeExp <- lm(formula = lifeExp ~ log(gdpPercap) + continent, data = gapminder_2007)
+
+# show the results
+summary(linear_model_lifeExp)
+
+```
+
+At first glance it looks like a good model: the residuals look roughly symmetrical around a median of ~0; the coefficients are almost all statistically significant at the highest level; and the adjusted R-squared is very high.
+
+To visualise the predictions, we first need to create a data grid of the results. A data grid gives all combinations of variables, allowing us to list predicted values of the independent variable alongside combinations of the independent variables.
+```{r}
+
+life_exp_grid <- gapminder_2007 %>%
+  data_grid(continent, gdpPercap)%>%
+  add_predictions(linear_model_lifeExp)
+
+slice_head(life_exp_grid, n= 10)
+
+```
+
+We can now plot the fitted values of the model as lines over the original data which is shown as points. Our model has created separate trend lines for each continent.
+
+```{r}
+ggplot(gapminder_2007, aes(log(gdpPercap), lifeExp, colour = continent))+
+  geom_point()+
+  geom_line(data = life_exp_grid, aes(y = pred))+
+  theme+
+  colour_d
+```
+
+
+### Predictions
+
+Using the predict function, our model can give us the life expectancy in 2007 for a hypothetical country.
+```{r}
+
+new_data_asia <- tibble(gdpPercap = 5000, continent = "Asia")
+
+new_data_europe <- tibble(gdpPercap = 100, continent = "Europe")
+
+```
+
+According to our model, if a country in Asia had a GDP per capita of 5000, the life expectancy would be `r predict(linear_model_lifeExp,newdata = new_data_asia) %>% round(digits = 2)`. A European country with a GDP per capita of 100 would have a life expectancy of `r predict(linear_model_lifeExp,newdata = new_data_europe)  %>% round(digits = 2)`.
+
+### Residuals
+
+We can also plot the residuals of the model to gain a quick visual understanding of their distribution. This is an easy way to judge whether we might need to change the specification, transform the variables or use a different kind of model.
+
+```{r}
+gapminder_2007 <- gapminder_2007 %>%
+  modelr::add_residuals(linear_model_lifeExp)
+
+ggplot(gapminder_2007, aes(x = log(gdpPercap), y = resid, colour = continent))+
+  geom_point()+
+  geom_abline(intercept = 0, slope = 0)+
+  facet_wrap(~continent)+
+  theme+
+  colour_d
+```
+
+

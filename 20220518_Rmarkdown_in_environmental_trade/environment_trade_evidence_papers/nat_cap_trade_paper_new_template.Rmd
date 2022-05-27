@@ -1,0 +1,504 @@
+---
+title: "Natural Capital and Trade: evidence for the CPTPP countries"  
+author: "Trade Policy Analysis, International Trade Analysis, Defra"
+date: "Last modified `r format(Sys.time(), '%d %B %Y')`"
+output: html_document
+
+---
+```{r global options, echo = FALSE}
+
+# REMEMBER TO SEARCH THE DOCUMENT FOR 'ad hoc' FIXES!
+
+#set global options
+knitr::opts_chunk$set(
+  echo = FALSE,
+  warning = FALSE,
+  message = FALSE)
+  
+```
+
+```{r load packages and define objects}
+
+#install.packages("tidyverse")
+#install.packages("knitr")
+#install.packages("cowplot")
+#install.packages("formattable")
+
+#load the tidyverse packages
+library(tidyverse)
+library(knitr)
+library(cowplot)
+library(formattable)
+
+# negate function
+'%not_in%' <- Negate('%in%')
+
+# set the theme and the discrete, binned and continuous colour schemes
+theme <- theme_classic()
+fill_b <- scale_fill_viridis_b()
+fill_c <-  scale_fill_viridis_c()
+fill_d <-  scale_fill_viridis_d()
+colour_b <- scale_colour_viridis_b()
+colour_c <- scale_colour_viridis_c()
+colour_d <- scale_colour_viridis_d()
+
+# define country grouping objects
+agri_exporters_to_gcc <- c("IND", "BRA", "USA", "AUS", "NLD", "FRA", "EGY", "ARG", "NZL", "TUR")
+cptpp_countries <- c("AUS", "CAN", "CHL", "JPN", "MEX", "NZL", "BRN", "MYS", "PER", "SGP", "VNM")
+gcc_countries <- c("BHR", "KWT", "OMN", "QAT", "SAU", "ARE")
+
+# set the partner country code, partner country name for the text, and country grouping
+partner_country <- "CPTPP" # 3 letter ISO or group acronym
+partner_country_name <- "the cptpp countries" # country name
+country_grouping <- cptpp_countries # one of the country grouping objects defined above
+
+is_this_a_country_grouping <- partner_country %in% c("CPTPP", "GCC", "AETGCC")
+
+individual_country_EPI_breakdown <- TRUE
+
+```
+
+```{r load data}
+
+# load the data and filter it for the partner country, the UK and the World.
+
+world_bank_data <- readxl::read_xlsx("natural_capital_trade_data.xlsx", sheet = "world_bank_data", range = "a1:j16021")%>%
+  mutate(year = as.numeric(year))
+
+governance_index <- readxl::read_xlsx("natural_capital_trade_data.xlsx", sheet = "governance_index", range = "a1:j4579")
+
+yale_epi <- readxl::read_xlsx("natural_capital_trade_data.xlsx", sheet = "yale_epi", range = "a1:g16929")
+
+wwf_lpi <- readxl::read_xlsx("natural_capital_trade_data.xlsx", sheet = "wwf_lpi", range = "a1:c283")
+
+```
+
+
+
+## Introduction
+
+This paper presents economic and environmental data to improve our understanding of the environmental situation in `r partner_country_name`.
+
+
+## World Bank data
+
+### Economic Indicators
+
+
+For background, these graphs show GDP growth, GDP in US dollars, and trade intensity for the UK, the world average, and `r partner_country_name`.
+
+Trade intensity is the annual value of trade as a percentage of GDP. It is a measure of the amount of trade a country engages in relative to the size of its economy. The UK is close to the world average for trade intensity. `r if(is_this_a_country_grouping){"**Note these figures are averages within the partner country grouping, not totals.**"}`
+  
+```{r world bank economic graphs, fig.width= 12, fig.height= 8}
+
+gdp_growth_graph <- ggplot(data = filter(world_bank_data, country_code %in% c(partner_country, "WLD", "GBR"), year > 1989))+
+  geom_line(mapping = aes(x = year, y = gdp_growth, colour = country))+
+  labs(title = "GDP growth, %",
+       caption = "source: World Bank")+
+  theme+
+  colour_d
+
+gdp_graph <- ggplot(data = filter(world_bank_data, country_code %in% c(partner_country, "GBR"), year > 1989))+
+  geom_line(mapping = aes(x = year, y = gdp_usd / 1000000000, colour = country))+
+  labs(title = "GDP in billions of US Dollars",
+       caption = "source: World Bank",
+       y = "GDP in billions of USD")+
+  theme+
+  colour_d
+
+trade_intensity_graph <- ggplot(data = filter(world_bank_data, country_code %in% c(partner_country, "WLD", "GBR"), year > 1989))+
+  geom_line(mapping = aes(x = year, y = trade_intensity, colour = country))+
+  labs(title = "Trade intensity",
+       subtitle = "annual trade value as a % of GDP",
+       caption = "source: World Bank")+
+  theme+
+  colour_d
+
+cowplot::plot_grid(gdp_graph, trade_intensity_graph, gdp_growth_graph, nrow = 2)
+
+```
+
+
+### World Bank Environmental Indicators
+
+#### Freshwater use and forest cover
+
+These graphs show annual freshwater use as a % of total resources; and forest area as a % of total area.
+
+The data doesn't tell us whether the UK or `r partner_country_name` are using water sustainably. Each country will have a naturally determined sustainable rate of water extraction, and the rates shown here could be above or below those rates.
+
+```{r freshwater use and forest cover graphs wld and gb, fig.width= 12, fig.height= 3}
+
+freshwater_use_graph_gb_wld <- ggplot(data = filter(world_bank_data, country_code %in% c(partner_country, "WLD", "GBR"), year == 2017),
+           mapping = aes(x = reorder(country, freshwater_use), y = freshwater_use, fill = country))+
+  geom_bar(stat = "identity",
+           width = 0.9,
+           show.legend = FALSE)+
+  geom_text(aes(label = round(freshwater_use, digits = 0), y = freshwater_use + 1))+
+  labs(title = "Annual freshwater use as a % of total resources, 2017",
+      caption = "source: World Bank",
+      x = "Country",
+      y = "% of total freshwater resources")+
+  coord_flip()+
+  theme+
+  fill_d
+
+forest_cover_graph_gb_wld <- ggplot()+
+  geom_line(data = filter(world_bank_data, country_code %in% c(partner_country, "WLD", "GBR"), year > 1989),
+           mapping = aes(x = year, y = forest_area, colour = country, linetype = country))+
+  labs(title = "Forest cover as a % of total area",
+      caption = "source: World Bank",
+      x = "Year",
+      y = "% of total area")+
+  theme+
+  colour_d
+
+cowplot::plot_grid(freshwater_use_graph_gb_wld, forest_cover_graph_gb_wld)
+
+```
+
+
+
+
+
+```{r freshwater use and forest cover graphs, fig.width= 12, fig.height= 8, results='asis', eval = is_this_a_country_grouping}
+
+freshwater_use_graph <- ggplot(data = filter(world_bank_data, country_code %in% country_grouping, year == 2017),
+           mapping = aes(x = reorder(country, freshwater_use), y = freshwater_use, fill = reorder(country, freshwater_use)))+
+  geom_bar(stat = "identity", show.legend = FALSE)+
+  geom_text(aes(label = round(freshwater_use, digits = 0), y = freshwater_use + 3))+
+  labs(title = "Annual freshwater use as a % of total resources, 2017",
+       subtitle = "Note: the x axis scale differs from the graph above.",
+      caption = "source: World Bank",
+      x = "Country",
+      y = "% of total freshwater resources")+
+  coord_flip()+
+  guides(fill = guide_legend(reverse = TRUE))+
+  theme+
+  fill_d
+
+forest_cover_graph <- ggplot(data = filter(world_bank_data, country_code %in% country_grouping, year == 2018),
+           mapping = aes(x = reorder(country, forest_area), y = forest_area, fill = reorder(country, forest_area)))+
+  geom_bar( stat = "identity", show.legend = FALSE)+
+  geom_text(aes(label = round(forest_area, digits = 0), y = forest_area + 3))+
+  labs(title = "Forest cover as a % of total area, 2018",
+      caption = "source: World Bank",
+      x = "Country",
+      y = "% of total area")+
+  coord_flip()+
+  guides(fill = guide_legend(reverse = TRUE))+
+  theme+
+  fill_d
+
+cowplot::plot_grid(freshwater_use_graph, forest_cover_graph)
+
+```
+
+
+
+#### Natural Resource Depletion
+
+Below we plot the relative use of selected natural resources (timber, energy and mineral extraction as a % of GNI). This is a World Bank measure of extraction of these specific resources, and doesn't reflect all natural resource depletion.
+
+
+```{r fig.width = 12, fig.height = 8}
+ggplot(data = filter(world_bank_data, country_code %in% c(partner_country, "WLD", "GBR"), year > 1999))+
+  geom_line(mapping = aes(x = year, y = nat_res_dep, colour = country))+
+  labs(title = "Natural resource depletion as a % of GNI",
+       subtitle = "Annual observations, 2000 - 2019",
+       caption = "source: World Bank",
+       x = "Year",
+       y = "Natural resource depletion, % of gross national income")+
+  theme+
+  colour_d
+
+```
+
+
+```{r fig.width = 12, fig.height = 8, results='asis', eval = is_this_a_country_grouping}
+ggplot(data = filter(world_bank_data, country_code %in% country_grouping, year > 1999), mapping = aes(x = year, y = nat_res_dep))+
+  geom_line(mapping = aes(colour = country))+
+  geom_text(data = filter(world_bank_data, country_code %in% country_grouping, year == 2018), aes(label = country), show.legend = FALSE, position = position_jitter(width = 1))+
+  labs(title = "Natural resource depletion as a % of GNI",
+       subtitle = "Annual observations, 2000 - 2019. Note that the Y axis differs from the graph above",
+       caption = "source: World Bank",
+       x = "Year",
+       y = "Natural resource depletion, % of gross national income")+
+  theme+
+  colour_d
+```
+
+
+#### Protected terrestrial and marine land area
+
+This bar plot shows the percentage of protected terrestrial and marine area for `r partner_country_name`, compared to the world average and the UK, in 2018. The UK figures are almost double the world average.
+
+
+```{r fig.height = 2, fig.width = 7}
+ggplot(data = filter(world_bank_data, country_code %in% c(partner_country, "WLD", "GBR"), year == 2018),
+           mapping = aes(x = reorder(country, terr_mar_protected), y = terr_mar_protected, fill = country))+
+  geom_bar(stat = "identity",
+           width = 0.9,
+           show.legend = FALSE)+
+  geom_text(aes(label = round(terr_mar_protected, digits = 0), y = terr_mar_protected + 1))+
+  labs(title = "Protected terrestrial and marine area as a % of total area, 2018",
+      caption = "source: World Bank",
+      x = "Country",
+      y = "% of total area")+
+  coord_flip()+
+  theme+
+  fill_d
+```
+
+
+`r if(is_this_a_country_grouping){"Breaking down between countries:"}`
+
+```{r results='asis', eval = is_this_a_country_grouping}
+ggplot(data = filter(world_bank_data, country_code %in% country_grouping, year == 2018),
+           mapping = aes(x = reorder(country, terr_mar_protected), y = terr_mar_protected, 
+                          fill = reorder(country, terr_mar_protected)))+
+  geom_bar(stat = "identity",
+           width = 0.9,
+           show.legend = FALSE)+
+  geom_text(aes(label = round(terr_mar_protected, digits = 0), y = terr_mar_protected + 1))+
+  labs(title = "Protected terrestrial and marine area as a % of total area, 2018",
+      caption = "source: World Bank",
+      x = "Country",
+      y = "% of total area")+
+  coord_flip()+
+  theme+
+  fill_d
+```
+
+
+
+## Yale University's Environmental Performance Index
+
+The 2020 Environmental Performance Index (EPI) provides a data-driven summary of the state of sustainability around the world. Using 32 performance indicators across 11 issue categories, the EPI ranks 180 countries on environmental health and ecosystem vitality. These indicators provide a gauge at a national scale of how close countries are to established environmental policy targets.
+
+```{r}
+# Use the partially aggregated components of the EPI to give an overview. Use a horizontal bar chart.
+
+epi_issue_categories <- yale_epi %>%
+  filter(type == "IssueCategory")
+
+ggplot(data = filter(epi_issue_categories, country_code %in% c(partner_country, "WLD", "GBR"), year == 2020), 
+       mapping = aes(x = var_name, y = value, fill = country))+
+  geom_bar(position = "dodge", stat = "identity")+
+   geom_text(data = filter(epi_issue_categories, country_code == partner_country, year == 2020), 
+            aes(label = round(value, digits = 0), y = value + 3, vjust = 1.1))+
+    labs(title = "Yale Environmental Performance Index broken down \n by issue category",
+      caption = "source: Yale University",
+      x = "Issue Category",
+      y = "Score")+
+  coord_flip()+
+  guides(fill = guide_legend(reverse = TRUE))+
+  theme+
+  fill_d
+
+```
+
+
+`r if(individual_country_EPI_breakdown){"Breaking down between countries:"}`
+
+```{r results = 'asis', eval = individual_country_EPI_breakdown}
+
+epi_issue_categories <- epi_issue_categories %>%
+  mutate(country_colours = case_when(country_code == "GBR" ~ "United Kingdom", 
+                                            country_code == "WLD" ~ "World", 
+                                            TRUE ~ "Partner country")
+  )
+
+for(i in country_grouping){
+print(ggplot(data = filter(epi_issue_categories, country_code %in% c(i, "WLD", "GBR"), year == 2020), 
+             mapping = aes(x = var_name, y = value, fill = country_colours))+
+  geom_bar(position = "dodge", stat = "identity")+
+  geom_text(data = filter(epi_issue_categories, country_code == i, year == 2020), 
+            aes(label = round(value, digits = 0), y = value + 3, vjust = 1.1))+
+    labs(title = epi_issue_categories$country[epi_issue_categories$country_code == i],
+      caption = "source: Yale University",
+      x = "Issue Category",
+      y = "Score")+
+  coord_flip()+
+  guides(fill = guide_legend(reverse = TRUE))+
+  theme+
+  fill_d)
+}
+```
+
+`r if(individual_country_EPI_breakdown){"Another way to cut the data is by environmental indicator."}`
+
+```{r results = 'asis', eval = individual_country_EPI_breakdown, fig.width= 10, fig.height= 16}
+
+print(ggplot(data = filter(epi_issue_categories, country_code %in% c(country_grouping, "WLD", "GBR"), year == 2020), 
+             mapping = aes(x = country, y = value, fill = country))+
+  geom_bar(position = "dodge", stat = "identity")+
+    geom_text(aes(label = round(value, digits = 0), y = value + 5))+
+    facet_wrap(~var_name, ncol = 2)+
+    labs(title = "Yale Environmental Performance Index broken down by issue category",
+      caption = "source: Yale University",
+      x = "Issue Category",
+      y = "Score")+
+  coord_flip()+
+  theme+
+  guides(fill = FALSE)+
+  fill_d
+)
+
+```
+
+## Worldwide Governance Indicators
+
+
+The Worldwide Governance Indicators (WGI) project reports aggregate and individual Worldwide Governance Indicators for over 200 countries and territories over the period 1996–2019, for six dimensions of governance.
+
+ + Voice and Accountability
+ + Political Stability and Absence of Violence
+ + Government Effectiveness
+ + Regulatory Quality
+ + Rule of Law
+ + Control of Corruption
+
+These aggregate indicators combine the views of a large number of enterprise, citizen and expert survey respondents in industrial and developing countries.  They are based on over 30 individual data sources produced by a variety of survey institutes, think tanks, non-governmental organizations, international organizations, and private sector firms.
+
+
+A recent European Parliament paper on Trade and Biodiversity argues that institutions and governance are the variable that determines the effect of trade on the environment:
+
+
+> "several ex-post assessments of various international agreements suggest that trade liberalisation has had some unwanted effects on the environment.
+>
+Empirical case studies find correlations between trade liberalisation, growth in exports of particular products and the development of unsustainable production techniques. However, environmental degradation is in general linked to poor institutions, poorly defined property rights, or inadequate regulatory and fiscal policies. In particular, the intensity of trade is positively correlated with biodiversity loss if trade interacts with institutional aspects, such as ownership insecurity.
+>
+It is well known that open-access exploitation of a natural resource often results in overexploitation. In some cases, ill-defined property rights can lead to resource depletion that outweighs the Ricardian gains from trade.
+>
+Academic literature shows that, under efficient collective resource management policies (fish quotas) or property rights (secured land ownership, land register in the case of forestry), the price driver generated by trade agreements in the exporting country can lead to further investment and exports without leading to overexploitation. On the opposite, insertion in international trade will lead to amplify the poor management of the commons.
+>
+Hence, both the academic and the empirical literature suggest that trade is not the problem per se, but that trade enhances existing problems that cause biodiversity loss, such as those linked to a poor institutional framework." 
+
+(Trade and Biodiversity, European Parliament, 2020)
+
+
+
+#### Are governance quality and and EPI correlated?
+
+```{r}
+
+governance_index_long <- governance_index %>%
+  pivot_longer(cols = c(4:10), names_to = "variable", values_to = "value")
+
+only_epi_obs <- yale_epi %>% filter(variable == "EPI")%>% select(country_code, year, value) %>% rename(epi_value = "value")
+
+mean_governance_epi <- left_join(governance_index_long, only_epi_obs, by = c("country_code", "year"))%>%
+  filter(year >= 2010)%>%
+  group_by(country_code, variable)%>%
+  summarise(governance_indicator_value = mean(value, na.rm = TRUE), epi_value = mean(epi_value, na.rm = TRUE))
+  
+scatter_overall_governance_epi <- ggplot(data = filter(mean_governance_epi, variable == "mean_governance_index"))+
+  geom_point(mapping = aes(x = governance_indicator_value, y = epi_value), colour = "darkcyan")+
+  geom_smooth(mapping = aes(x = governance_indicator_value, y = epi_value), method = "lm", alpha = 0.15)+
+  labs(title = "Country mean Worldwide Governance Indicator score plotted against \n country mean Yale EPI score",
+       subtitle = "each point represents one country",
+       caption = "source: World Bank, Yale University",
+       x = "Average Worldwide Governance Indicator score, indexed to a 0 - 100 scale",
+       y = "Yale EPI score")+
+  theme+
+  colour_d
+
+scatter_overall_governance_epi
+```
+
+
+The six measures are originally scored from -2.5 to +2.5, but here we have transformed the units to a scale of 0 - 100. The world score is constant at 50, meaning that all countries are scored relative to the world average. Averaging the six Worldwide Governance Indicators per country, and then averaging all observations of governance and EPI over time, we arrive at a mean score for each variable per country. 
+
+There is a positive correlation between Governance score and EPI. This supports the argument in the European Parliament paper on biodiversity and trade (above): we should be particularly concerned with the governance standards in potential partner countries, because this determines the extent to which trade will cause environmental damage.
+
+
+
+#### Looking at the six individual scores:
+
+
+```{r}
+
+ggplot(data = filter(governance_index_long, country_code %in% c(partner_country, "WLD", "GBR"), year == 2019, variable != "mean_governance_index"), 
+       mapping = aes(x = country, y = value, fill = country))+
+  geom_bar(stat = "identity")+
+  geom_text(aes(label = round(value, digits = 0), y = value + 5))+
+  facet_wrap(vars(variable))+
+    labs(title = "Worldwide Governance Indicator scores, 2019",
+         subtitle = "0 - 100, with a score of 50 representing the world average",
+       caption = "source: Worldwide Governance Indicators, World Bank",
+       x = "Country",
+       y = "Score indexed to 100")+
+  coord_flip()+
+  guides(fill = FALSE)+
+  theme+
+  fill_d
+
+```
+
+```{r}
+
+ggplot(data = filter(governance_index_long, country_code %in% c(partner_country, "WLD", "GBR"), variable != "mean_governance_index"))+
+  geom_line(mapping = aes(x = year, y = value, colour = country))+
+  facet_wrap(vars(variable))+
+   labs(title = "Worldwide Governance Indicator scores, 1996 - 2019",
+        subtitle = "0 - 100, with a score of 50 representing the world average",
+       caption = "source: Worldwide Governance Indicators, World Bank",
+       x = "year",
+       y = "Score indexed to 100")+
+  theme+
+  colour_d
+
+```
+
+
+`r if(is_this_a_country_grouping){"Breaking down between countries:"}`
+
+
+```{r results='asis', eval = is_this_a_country_grouping}
+ggplot(data = filter(governance_index_long, country_code %in% c(country_grouping, "WLD", "GBR"), year == 2019, variable == "mean_governance_index"),
+       mapping = aes(x = reorder(country, value), y = value, fill = reorder(country, value)))+
+  geom_bar(stat = "identity")+
+  geom_text(aes(label = round(value, digits = 0), y = value + 3))+
+        labs(title = "Worldwide Governance indicator scores, 2019",
+       caption = "source: World Governance Indicators",
+       x = "Country",
+       y = "Score indexed to 100")+
+  coord_flip()+
+  guides(fill = FALSE)+
+  scale_fill_viridis_d()+
+  theme
+
+ggplot(data = filter(governance_index_long, country_code %in% country_grouping, variable == "mean_governance_index"), mapping = aes(x = year, y = value, colour = country))+
+  geom_line()+
+  geom_text(data = filter(governance_index_long, country_code %in% country_grouping, variable == "mean_governance_index", year == 2019), aes(label = country), 
+            show.legend = FALSE, position = position_jitter(width = 1))+
+   labs(title = "Worldwide Governance indicator scores, 1996 - 2019",
+       caption = "source: Worldwide Governance Indicators",
+       x = "year",
+       y = "Score indexed to 100")+
+  theme
+
+```
+
+
+
+## WWF Living Planet Index
+
+The WWF living planet index (LPI) - most recently updated in 2020 - tracks almost 21,000 populations of mammals, birds, fish, reptiles and amphibians around the world.
+The thousands of individual population trends are brought together to calculate the average percentage change in population sizes using an index (below).
+
+The LPI shows an average 68% fall in monitored vertebrate species populations between 1970 and 2016 globally.
+
+
+```{r wwf_lpi}
+ggplot(data = wwf_lpi)+
+  geom_line(mapping = aes(x = year, y = value, colour = continent))+
+  labs(title = "WWF Living Planet Index, 1970 - 2016",
+      caption = "source: WWF")+
+  theme+
+  colour_d
+
+```
+
+

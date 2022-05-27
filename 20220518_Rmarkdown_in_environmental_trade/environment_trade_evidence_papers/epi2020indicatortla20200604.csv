@@ -1,0 +1,47 @@
+Type,Abbreviation,Variable,Short name,Order
+EPI,EPI,Environmental Performance Index,EPI,1
+PolicyObjective,HLT,Environmental Health,Health,2
+IssueCategory,AIR,Air Quality,Air Quality,3
+Indicator,PMD,PM2.5 exposure,PM2.5,4
+Indicator,HAD,Household solid fuels,Household solid fuels,5
+Indicator,OZD,Ozone exposure,Ozone,6
+IssueCategory,H2O,Sanitation & Drinking Water,Sanitation & Drinking Water,7
+Indicator,USD,Unsafe sanitation ,Sanitation,8
+Indicator,UWD,Unsafe drinking water,Drinking water,9
+IssueCategory,HMT,Heavy Metals,Heavy Metals,10
+Indicator,PBD,Lead exposure,Lead,11
+IssueCategory,WMG,Waste Management,Waste Management,12
+Indicator,MSW,Controlled solid waste,Solid waste,13
+PolicyObjective,ECO,Ecosystem Vitality,Ecosystem Vitality,14
+IssueCategory,BDH,Biodiversity & Habitat,Biodiversity,15
+Indicator,TBN,Terrestrial biome protection (national weights),Terrestrial biomes (nat'l),16
+Indicator,TBG,Terrestrial biome protection (global weights),Terrestrial biomes (global),17
+Indicator,MPA,Marine protected areas,Marine protected areas,18
+Indicator,PAR,Protected Areas Representativeness Index,Protected Areas Rep. Ind.,19
+Indicator,SHI,Species Habitat Index,Species Habitat Index,20
+Indicator,SPI,Species Protection Index,Species Protection Index,21
+Indicator,BHV,Biodiversity Habitat Index,Biodiversity Habitat Index,22
+IssueCategory,ECS,Ecosystem Services,Ecosystem Services,23
+Indicator,TCL,Tree cover loss,Tree cover loss,24
+Indicator,GRL,Grassland loss,Grassland loss,25
+Indicator,WTL,Wetland loss,Wetland loss,26
+IssueCategory,FSH,Fisheries,Fisheries,27
+Indicator,FSS,Fish Stock Status,Fish Stock Status,28
+Indicator,RMS,Marine Trophic Index,Marine Trophic Index,29
+Indicator,FGT,Fish caught by trawling,Fish caught by trawling,30
+IssueCategory,CCH,Climate Change,Climate Change,31
+Indicator,CDA,Adjusted emission growth rate for carbon dioxide,CO2 growth rate,32
+Indicator,CHA,Adjusted emission growth rate for methane,CH4 growth rate,33
+Indicator,FGA,Adjusted emission growth rate for F-gases,F-gas growth rate,34
+Indicator,NDA,Adjusted emission growth rate for nitrous oxide,N2O growth rate,35
+Indicator,BCA,Adjusted emission growth rate for black carbon,Black Carbon growth rate,36
+Indicator,LCB,Growth rate in carbon dioxide emissions from land cover,CO2 from land cover,37
+Indicator,GIB,Greenhouse gas intensity growth rate,GHG intensity trend,38
+Indicator,GHP,Greenhouse gas emissions per capita,GHG per capita,39
+IssueCategory,APE,Pollution Emissions,Pollution Emissions,40
+Indicator,SDA,Adjusted emission growth rate for sulfer dioxide,SO2 growth rate,41
+Indicator,NXA,Adjusted emission growth rate for nitrous oxides,NOx growth rate,42
+IssueCategory,AGR,Agriculture,Agriculture,43
+Indicator,SNM,Sustainable Nitrogen Management Index,Sustainable N Mgmt Index,44
+IssueCategory,WRS,Water Resources,Water Resources,45
+Indicator,WWT,Wastewater treatment,Wastewater treatment,46
